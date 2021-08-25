@@ -3,8 +3,8 @@ package main
 import (
 	"os"
 
-	"github.com/HPISTechnologies/3rd-party/tm/cli"
-	"github.com/HPISTechnologies/arbitrator-svc/service"
+	"github.com/arcology/3rd-party/tm/cli"
+	"github.com/arcology/arbitrator-svc/service"
 )
 
 func main() {

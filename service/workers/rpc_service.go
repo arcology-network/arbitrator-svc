@@ -4,14 +4,14 @@ import (
 	"context"
 	"errors"
 
-	ethCommon "github.com/HPISTechnologies/3rd-party/eth/common"
-	"github.com/HPISTechnologies/arbitrator-svc/accumulator"
-	arbitrator "github.com/HPISTechnologies/arbitrator-svc/impl-arbitrator"
-	"github.com/HPISTechnologies/arbitrator-svc/types"
-	ctypes "github.com/HPISTechnologies/common-lib/types"
-	"github.com/HPISTechnologies/component-lib/actor"
-	kafkalib "github.com/HPISTechnologies/component-lib/kafka/lib"
-	"github.com/HPISTechnologies/component-lib/log"
+	ethCommon "github.com/arcology/3rd-party/eth/common"
+	"github.com/arcology/arbitrator-svc/accumulator"
+	arbitrator "github.com/arcology/arbitrator-svc/impl-arbitrator"
+	"github.com/arcology/arbitrator-svc/types"
+	ctypes "github.com/arcology/common-lib/types"
+	"github.com/arcology/component-lib/actor"
+	kafkalib "github.com/arcology/component-lib/kafka/lib"
+	"github.com/arcology/component-lib/log"
 	"go.uber.org/zap"
 )
 

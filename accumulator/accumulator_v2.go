@@ -5,7 +5,7 @@ import (
 	"sort"
 	"sync"
 
-	"github.com/HPISTechnologies/arbitrator-svc/types"
+	"github.com/arcology/arbitrator-svc/types"
 )
 
 const (

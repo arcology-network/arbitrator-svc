@@ -1,10 +1,10 @@
 package workers
 
 import (
-	"github.com/HPISTechnologies/arbitrator-svc/types"
-	"github.com/HPISTechnologies/common-lib/common"
-	ctypes "github.com/HPISTechnologies/common-lib/types"
-	"github.com/HPISTechnologies/component-lib/actor"
+	"github.com/arcology/arbitrator-svc/types"
+	"github.com/arcology/common-lib/common"
+	ctypes "github.com/arcology/common-lib/types"
+	"github.com/arcology/component-lib/actor"
 )
 
 type EuResultPreProcessor struct {

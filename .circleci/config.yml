@@ -10,7 +10,7 @@ jobs:
       - run: sudo apt update
       - run: sudo apt install libboost-all-dev
       - run: sudo apt install libtbb-dev
-      - run: go env -w GOPRIVATE=github.com/HPISTechnologies
+      - run: go env -w GOPRIVATE=github.com/arcology
       - run: sudo bash .circleci/download_artifacts.sh
       - run: go build ./...
       - run: export LD_LIBRARY_PATH=/usr/local/lib && go test -tags 'nosproc nometri' -v ./... -coverprofile=coverage.txt -covermode=atomic

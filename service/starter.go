@@ -1,10 +1,10 @@
 package service
 
 import (
-	tmCommon "github.com/HPISTechnologies/3rd-party/tm/common"
-	"github.com/HPISTechnologies/component-lib/kafka"
-	"github.com/HPISTechnologies/component-lib/log"
-	"github.com/HPISTechnologies/component-lib/rpc"
+	tmCommon "github.com/arcology/3rd-party/tm/common"
+	"github.com/arcology/component-lib/kafka"
+	"github.com/arcology/component-lib/log"
+	"github.com/arcology/component-lib/rpc"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )

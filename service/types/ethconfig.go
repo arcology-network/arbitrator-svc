@@ -4,12 +4,12 @@ import (
 	"math"
 	"math/big"
 
-	"github.com/HPISTechnologies/evm/common"
-	"github.com/HPISTechnologies/evm/consensus"
-	"github.com/HPISTechnologies/evm/core/types"
-	"github.com/HPISTechnologies/evm/core/vm"
-	"github.com/HPISTechnologies/evm/params"
-	adaptor "github.com/HPISTechnologies/vm-adaptor/evm"
+	"github.com/arcology/evm/common"
+	"github.com/arcology/evm/consensus"
+	"github.com/arcology/evm/core/types"
+	"github.com/arcology/evm/core/vm"
+	"github.com/arcology/evm/params"
+	adaptor "github.com/arcology/vm-adaptor/evm"
 )
 
 // fakeChain implements the ChainContext interface.

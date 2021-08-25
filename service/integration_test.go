@@ -6,14 +6,14 @@ import (
 	"testing"
 	"time"
 
-	ethcommon "github.com/HPISTechnologies/3rd-party/eth/common"
-	cmntypes "github.com/HPISTechnologies/common-lib/types"
-	"github.com/HPISTechnologies/component-lib/actor"
-	"github.com/HPISTechnologies/component-lib/log"
-	"github.com/HPISTechnologies/component-lib/mock/kafka"
-	"github.com/HPISTechnologies/component-lib/mock/rpc"
-	urltypes "github.com/HPISTechnologies/concurrenturl/v2/type"
-	"github.com/HPISTechnologies/concurrenturl/v2/type/commutative"
+	ethcommon "github.com/arcology/3rd-party/eth/common"
+	cmntypes "github.com/arcology/common-lib/types"
+	"github.com/arcology/component-lib/actor"
+	"github.com/arcology/component-lib/log"
+	"github.com/arcology/component-lib/mock/kafka"
+	"github.com/arcology/component-lib/mock/rpc"
+	urltypes "github.com/arcology/concurrenturl/v2/type"
+	"github.com/arcology/concurrenturl/v2/type/commutative"
 )
 
 func TestBootstrapCase1(t *testing.T) {

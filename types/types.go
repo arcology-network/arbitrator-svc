@@ -3,9 +3,9 @@ package types
 import (
 	"math/big"
 
-	ctypes "github.com/HPISTechnologies/common-lib/types"
-	urltype "github.com/HPISTechnologies/concurrenturl/v2/type"
-	"github.com/HPISTechnologies/concurrenturl/v2/type/commutative"
+	ctypes "github.com/arcology/common-lib/types"
+	urltype "github.com/arcology/concurrenturl/v2/type"
+	"github.com/arcology/concurrenturl/v2/type/commutative"
 )
 
 type BalanceTransition struct {

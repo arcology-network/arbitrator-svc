@@ -5,8 +5,8 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/HPISTechnologies/arbitrator-svc/accumulator"
-	"github.com/HPISTechnologies/arbitrator-svc/types"
+	"github.com/arcology/arbitrator-svc/accumulator"
+	"github.com/arcology/arbitrator-svc/types"
 )
 
 func TestAccumulatorV2Basic(t *testing.T) {

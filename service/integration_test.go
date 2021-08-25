@@ -226,17 +226,9 @@ func runTestCase(t *testing.T, txGroups [][]*cmntypes.TxElement, records ...*acc
 
 	var txAccessRecords []*cmntypes.TxAccessRecords
 	for _, record := range records {
-		var univalues []cmntypes.UnivalueInterface
+		var univalues []interface{}
 		for _, a := range record.accesses {
-			univalues = append(univalues, &urltypes.Univalue{
-				Tx:        record.id,
-				Path:      a.path,
-				Reads:     a.reads,
-				Writes:    a.writes,
-				Preexists: a.preexists,
-				Composite: a.composite,
-				Value:     a.value,
-			})
+			univalues = append(univalues, urltypes.CreateUnivalueForTest(record.id, a.path, a.reads, a.writes, a.value, a.preexists, a.composite))
 		}
 		txAccessRecords = append(txAccessRecords, &cmntypes.TxAccessRecords{
 			Hash:     string(record.hash.Bytes()),

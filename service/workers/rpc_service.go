@@ -3,7 +3,6 @@ package workers
 import (
 	"context"
 	"errors"
-	"time"
 
 	ethCommon "github.com/HPISTechnologies/3rd-party/eth/common"
 	"github.com/HPISTechnologies/arbitrator-svc/accumulator"
@@ -121,12 +120,9 @@ func detectConflict(arbitrator *arbitrator.ArbitratorImpl, txsListGroup [][]*cty
 		}
 		groups = append(groups, group)
 	}
-	inlog.Log(log.LogLevel_Debug, "----------------before arbitrator.Reset")
 	// Arbitration.
 	arbitrator.Reset()
-	inlog.Log(log.LogLevel_Debug, "----------------after arbitrator.Reset", zap.Int("euDict", len(*euResults)))
-	ids, _, flags, left, right, tims, clearTime, txnums := arbitrator.DetectConflict(groups)
-	inlog.Log(log.LogLevel_Debug, "----------------after arbitrator.DetectConflict", zap.Durations("tims", tims), zap.Duration("cleartime", time.Now().Sub(clearTime)), zap.Int("txnums", txnums))
+	ids, _, flags, left, right := arbitrator.DetectConflict(groups)
 	// Unique conflict IDs.
 	uniqueConflicts := make(map[uint32]struct{})
 	for i, conflict := range flags {

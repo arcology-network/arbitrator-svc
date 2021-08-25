@@ -1,0 +1,19 @@
+version: 2
+jobs:
+  build:
+    docker:
+      # specify the version
+      - image: cimg/go:1.15.8
+
+    steps:
+      - checkout
+      - run: sudo apt update
+      - run: sudo apt install libboost-all-dev
+      - run: sudo apt install libtbb-dev
+      - run: go env -w GOPRIVATE=github.com/HPISTechnologies
+      - run: sudo bash .circleci/download_artifacts.sh
+      - run: go build ./...
+      - run: export LD_LIBRARY_PATH=/usr/local/lib && go test -tags 'nosproc nometri' -v ./... -coverprofile=coverage.txt -covermode=atomic
+      - run: bash <(curl -s https://codecov.io/bash) -t 55de6933-2c4b-4f10-889a-bc19fd2072e3
+      - store_artifacts:
+          path: arbitrator-svc

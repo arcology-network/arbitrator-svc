@@ -3,9 +3,9 @@ package types
 import (
 	"math/big"
 
-	ctypes "github.com/arcology/common-lib/types"
-	urltype "github.com/arcology/concurrenturl/v2/type"
-	"github.com/arcology/concurrenturl/v2/type/commutative"
+	ctypes "github.com/arcology-network/common-lib/types"
+	urltype "github.com/arcology-network/concurrenturl/v2/type"
+	"github.com/arcology-network/concurrenturl/v2/type/commutative"
 )
 
 type BalanceTransition struct {
@@ -38,13 +38,15 @@ func Process(ars *ctypes.TxAccessRecords) *ProcessedEuResult {
 		Composite:   make([]bool, length),
 		Transitions: make([]*BalanceTransition, 0, length),
 	}
-	for i, uv := range ars.Accesses {
+	univalues := urltype.Univalues{}
+	univalues = univalues.DecodeV2(ars.Accesses)
+	for i, uv := range univalues {
 		univalue := uv.(*urltype.Univalue)
 		per.Txs[i] = univalue.GetTx()
 		per.Paths[i] = univalue.GetPath()
 		per.Reads[i] = univalue.Reads()
 		per.Writes[i] = univalue.Writes()
-		per.AddOrDelete[i] = univalue.IfAddOrDelete()
+		//per.AddOrDelete[i] = univalue.IfAddOrDelete()
 		per.Composite[i] = univalue.Composite()
 		switch v := univalue.Value().(type) {
 		case *commutative.Balance:

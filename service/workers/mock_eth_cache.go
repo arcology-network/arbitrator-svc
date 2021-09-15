@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/arcology/common-lib/types"
-	"github.com/arcology/evm/crypto"
-	adaptor "github.com/arcology/vm-adaptor/evm"
+	"github.com/arcology-network/common-lib/types"
+	"github.com/arcology-network/evm/crypto"
+	adaptor "github.com/arcology-network/vm-adaptor/evm"
 )
 
 type mockEthAccount struct {

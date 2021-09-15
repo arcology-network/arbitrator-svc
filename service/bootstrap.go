@@ -3,9 +3,9 @@ package service
 import (
 	"net/http"
 
-	"github.com/arcology/arbitrator-svc/service/workers"
-	"github.com/arcology/component-lib/actor"
-	"github.com/arcology/component-lib/streamer"
+	"github.com/arcology-network/arbitrator-svc/service/workers"
+	"github.com/arcology-network/component-lib/actor"
+	"github.com/arcology-network/component-lib/streamer"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 

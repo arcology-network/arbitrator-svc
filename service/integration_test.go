@@ -6,14 +6,14 @@ import (
 	"testing"
 	"time"
 
-	ethcommon "github.com/arcology/3rd-party/eth/common"
-	cmntypes "github.com/arcology/common-lib/types"
-	"github.com/arcology/component-lib/actor"
-	"github.com/arcology/component-lib/log"
-	"github.com/arcology/component-lib/mock/kafka"
-	"github.com/arcology/component-lib/mock/rpc"
-	urltypes "github.com/arcology/concurrenturl/v2/type"
-	"github.com/arcology/concurrenturl/v2/type/commutative"
+	ethcommon "github.com/arcology-network/3rd-party/eth/common"
+	cmntypes "github.com/arcology-network/common-lib/types"
+	"github.com/arcology-network/component-lib/actor"
+	"github.com/arcology-network/component-lib/log"
+	"github.com/arcology-network/component-lib/mock/kafka"
+	"github.com/arcology-network/component-lib/mock/rpc"
+	urltypes "github.com/arcology-network/concurrenturl/v2/type"
+	"github.com/arcology-network/concurrenturl/v2/type/commutative"
 )
 
 func TestBootstrapCase1(t *testing.T) {
@@ -224,16 +224,16 @@ func runTestCase(t *testing.T, txGroups [][]*cmntypes.TxElement, records ...*acc
 	cfg.openPrometheus = false
 	cfg.Start()
 
-	var txAccessRecords []*cmntypes.TxAccessRecords
+	var txAccessRecords cmntypes.TxAccessRecordses
 	for _, record := range records {
-		var univalues []interface{}
+		univalues := urltypes.Univalues{}
 		for _, a := range record.accesses {
 			univalues = append(univalues, urltypes.CreateUnivalueForTest(record.id, a.path, a.reads, a.writes, a.value, a.preexists, a.composite))
 		}
 		txAccessRecords = append(txAccessRecords, &cmntypes.TxAccessRecords{
 			Hash:     string(record.hash.Bytes()),
 			ID:       record.id,
-			Accesses: univalues,
+			Accesses: univalues.EncodeV2(),
 		})
 	}
 

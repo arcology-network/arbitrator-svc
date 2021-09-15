@@ -3,15 +3,16 @@ package workers
 import (
 	"context"
 	"errors"
+	"time"
 
-	ethCommon "github.com/arcology/3rd-party/eth/common"
-	"github.com/arcology/arbitrator-svc/accumulator"
-	arbitrator "github.com/arcology/arbitrator-svc/impl-arbitrator"
-	"github.com/arcology/arbitrator-svc/types"
-	ctypes "github.com/arcology/common-lib/types"
-	"github.com/arcology/component-lib/actor"
-	kafkalib "github.com/arcology/component-lib/kafka/lib"
-	"github.com/arcology/component-lib/log"
+	ethCommon "github.com/arcology-network/3rd-party/eth/common"
+	"github.com/arcology-network/arbitrator-svc/accumulator"
+	arbitrator "github.com/arcology-network/arbitrator-svc/impl-arbitrator"
+	"github.com/arcology-network/arbitrator-svc/types"
+	ctypes "github.com/arcology-network/common-lib/types"
+	"github.com/arcology-network/component-lib/actor"
+	kafkalib "github.com/arcology-network/component-lib/kafka/lib"
+	"github.com/arcology-network/component-lib/log"
 	"go.uber.org/zap"
 )
 
@@ -120,9 +121,12 @@ func detectConflict(arbitrator *arbitrator.ArbitratorImpl, txsListGroup [][]*cty
 		}
 		groups = append(groups, group)
 	}
+	inlog.Log(log.LogLevel_Debug, "----------------before arbitrator.Reset")
 	// Arbitration.
 	arbitrator.Reset()
-	ids, _, flags, left, right := arbitrator.DetectConflict(groups)
+	inlog.Log(log.LogLevel_Debug, "----------------after arbitrator.Reset", zap.Int("euDict", len(*euResults)))
+	ids, _, flags, left, right, tims, clearTime, txnums := arbitrator.DetectConflict(groups)
+	inlog.Log(log.LogLevel_Debug, "----------------after arbitrator.DetectConflict", zap.Durations("tims", tims), zap.Duration("cleartime", time.Now().Sub(clearTime)), zap.Int("txnums", txnums))
 	// Unique conflict IDs.
 	uniqueConflicts := make(map[uint32]struct{})
 	for i, conflict := range flags {

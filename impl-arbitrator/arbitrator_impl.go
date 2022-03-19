@@ -1,7 +1,6 @@
 package arbitrator
 
 import (
-	"fmt"
 	"time"
 	"unsafe"
 
@@ -10,26 +9,32 @@ import (
 )
 
 type ArbitratorImpl struct {
-	Txs        []uint32
-	Paths      []string
-	Reads      []uint32
-	Writes     []uint32
-	Composite  []bool
 	arbitrator unsafe.Pointer
+
+	Txs       []uint32
+	Paths     []string
+	Reads     []uint32
+	Writes    []uint32
+	Composite []bool
 }
 
 func NewArbitratorImpl() *ArbitratorImpl {
 	preAllocSize := 5000000
 	return &ArbitratorImpl{
+		arbitrator: wrapper.Start(),
 		Txs:        make([]uint32, 0, preAllocSize),
 		Paths:      make([]string, 0, preAllocSize),
 		Reads:      make([]uint32, 0, preAllocSize),
 		Writes:     make([]uint32, 0, preAllocSize),
 		Composite:  make([]bool, 0, preAllocSize),
-		arbitrator: wrapper.Start(),
 	}
 }
 
+func (arb *ArbitratorImpl) Clear() {
+	wrapper.Clear(arb.arbitrator)
+	//arb.arbitrator = wrapper.Start()
+	arb.Reset()
+}
 func (arb *ArbitratorImpl) Reset() {
 	arb.Txs = arb.Txs[:0]
 	arb.Paths = arb.Paths[:0]
@@ -37,52 +42,62 @@ func (arb *ArbitratorImpl) Reset() {
 	arb.Writes = arb.Writes[:0]
 	arb.Composite = arb.Composite[:0]
 }
-
-func (arb *ArbitratorImpl) DetectConflict(groups [][]*types.ProcessedEuResult) ([]uint32, []uint32, []bool, []uint32, []uint32, []time.Duration, time.Time, int) {
-	whitelist := make([]uint32, 0, len(groups))
-	indexToID := make(map[uint32]uint32)
-	tims := make([]time.Duration, 6)
-	begintime := time.Now()
-	for i, g := range groups {
-		if len(g) == 0 {
+func (arb *ArbitratorImpl) Insert(groups []*types.ProcessedEuResult) ([]time.Duration, int) {
+	//func (arb *ArbitratorImpl) Insert(filename string, groups []*types.ProcessedEuResult) (time.Duration, int) {
+	arb.Reset()
+	for _, per := range groups {
+		if per == nil {
 			continue
 		}
-		for _, per := range g {
-			for range per.Paths {
-				arb.Txs = append(arb.Txs, uint32(i))
-			}
-			arb.Paths = append(arb.Paths, per.Paths...)
-			arb.Reads = append(arb.Reads, per.Reads...)
-			arb.Writes = append(arb.Writes, per.Writes...)
-			arb.Composite = append(arb.Composite, per.Composite...)
-		}
-		if len(g[0].Txs) == 0 {
-			continue
-		}
-		indexToID[uint32(i)] = g[0].Txs[0]
-		whitelist = append(whitelist, uint32(i))
+		arb.Txs = append(arb.Txs, per.Txs...)
+		arb.Paths = append(arb.Paths, per.Paths...)
+		arb.Reads = append(arb.Reads, per.Reads...)
+		arb.Writes = append(arb.Writes, per.Writes...)
+		arb.Composite = append(arb.Composite, per.Composite...)
 	}
-	tims[0] = time.Now().Sub(begintime)
 
-	connectstrTime, buf := wrapper.Insert(arb.arbitrator, arb.Txs, arb.Paths, arb.Reads, arb.Writes, arb.Composite)
-	defer wrapper.Clear(arb.arbitrator, buf)
+	/**************************************************************************************************/
+	//filename := "testdata"
+	// common.AppendToFile(filename, "=============================================")
+	// common.AddToLogFile(filename, "txs", arb.Txs)
+	// common.AddToLogFile(filename, "paths", arb.Paths)
+	// common.AddToLogFile(filename, "reads", arb.Reads)
+	// common.AddToLogFile(filename, "writes", arb.Writes)
+	// common.AddToLogFile(filename, "composite", arb.Composite)
+	/**************************************************************************************************/
+
+	tim := wrapper.Insert(arb.arbitrator, arb.Txs, arb.Paths, arb.Reads, arb.Writes, arb.Composite)
+
+	return tim, len(arb.Txs)
+}
+
+func (arb *ArbitratorImpl) DetectConflict(groups [][]*types.ProcessedEuResult) ([]uint32, []uint32, []bool, []uint32, []uint32, []time.Duration, int, []time.Duration, int) {
+	tims := make([]time.Duration, 3)
+	begintime := time.Now()
+	total := 0
+	totalTransitions := 0
+	whitelist := make([][]uint32, len(groups))
+	for i, gs := range groups {
+		total = total + len(gs)
+		whitelist[i] = make([]uint32, len(gs))
+		for j, g := range gs {
+			if g == nil || len(g.Txs) == 0 {
+				continue
+			}
+			totalTransitions = totalTransitions + len(g.Txs)
+			whitelist[i][j] = g.Txs[0]
+		}
+	}
+	tims[0] = time.Since(begintime)
+
 	t0 := time.Now()
-	begintime = time.Now()
-	txs, g, flags := wrapper.Detect(arb.arbitrator, whitelist)
-	fmt.Printf("len(arb.Txs): %d, wrapper.Detect: %v\n", len(arb.Txs), time.Since(t0))
-	tims[2] = time.Now().Sub(begintime)
+
+	txs, g, flags, tetails, totals := wrapper.Detect(arb.arbitrator, whitelist)
+	tims[1] = time.Since(t0)
+
 	begintime = time.Now()
 
 	l, r := wrapper.ExportTxs(arb.arbitrator)
-	tims[3] = time.Now().Sub(begintime)
-	begintime = time.Now()
-	left := make([]uint32, len(l))
-	right := make([]uint32, len(r))
-	for i := range left {
-		left[i] = indexToID[l[i]]
-		right[i] = indexToID[r[i]]
-	}
-	tims[4] = time.Now().Sub(begintime)
-	tims[5] = connectstrTime
-	return txs, g, flags, left, right, tims, time.Now(), len(arb.Txs)
+	tims[2] = time.Since(begintime)
+	return txs, g, flags, l, r, tims, total, tetails, totals
 }

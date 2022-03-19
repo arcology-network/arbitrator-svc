@@ -4,6 +4,7 @@ import (
 	"math"
 	"math/big"
 
+	mainCfg "github.com/arcology-network/component-lib/config"
 	"github.com/arcology-network/evm/common"
 	"github.com/arcology-network/evm/consensus"
 	"github.com/arcology-network/evm/core/types"
@@ -37,6 +38,7 @@ func createTestConfig() *adaptor.Config {
 		GasLimit:    math.MaxUint64,
 		Difficulty:  new(big.Int).SetUint64(10000000),
 	}
+	cfg.ChainConfig.ChainID = mainCfg.MainConfig.ChainId
 	cfg.Chain = new(fakeChain)
 	return cfg
 }

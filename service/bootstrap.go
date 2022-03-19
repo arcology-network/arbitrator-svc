@@ -3,6 +3,7 @@ package service
 import (
 	"net/http"
 
+	arbitrator "github.com/arcology-network/arbitrator-svc/impl-arbitrator"
 	"github.com/arcology-network/arbitrator-svc/service/workers"
 	"github.com/arcology-network/component-lib/actor"
 	"github.com/arcology-network/component-lib/streamer"
@@ -67,6 +68,8 @@ func (cfg *Config) Start() {
 		http.Handle("/streamer", promhttp.Handler())
 		go http.ListenAndServe(":29001", nil)
 	}
+
+	arbitrator := arbitrator.NewArbitratorImpl()
 
 	broker := streamer.NewStatefulStreamer()
 	//00 initializer
@@ -138,18 +141,20 @@ func (cfg *Config) Start() {
 		},
 		[]string{actor.MsgEuResultSelected},
 		[]int{1},
-		workers.NewEuResultsAggreSelector(cfg.concurrency, cfg.groupid),
+		workers.NewEuResultsAggreSelector(cfg.concurrency, cfg.groupid, arbitrator),
 	)
 	euresultAggreSelector.Connect(streamer.NewDisjunctions(euresultAggreSelector, 4))
 
 	//03 rpcService
-	rpcsvc := workers.NewRpcService(cfg.concurrency, cfg.groupid)
+	rpcsvc := workers.NewRpcService(cfg.concurrency, cfg.groupid, arbitrator)
 	rpcService := actor.NewActor(
 		"rpcService",
 		broker,
 		[]string{
 			actor.MsgStartSub,
 			actor.MsgEuResultSelected,
+			//actor.MsgPreProcessedEuResults,
+			//actor.MsgAppHash,
 		},
 		[]string{actor.MsgReapinglist},
 		[]int{1},

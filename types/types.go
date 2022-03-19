@@ -21,45 +21,49 @@ type ProcessedEuResult struct {
 	Paths       []string
 	Reads       []uint32
 	Writes      []uint32
-	AddOrDelete []bool
 	Composite   []bool
 	Transitions []*BalanceTransition
 }
 
+func (per *ProcessedEuResult) Reset(hash string) {
+	per.Hash = hash
+	per.Txs = per.Txs[:0]
+	per.Paths = per.Paths[:0]
+	per.Reads = per.Reads[:0]
+	per.Writes = per.Writes[:0]
+	per.Composite = per.Composite[:0]
+	per.Transitions = per.Transitions[:0]
+}
+
+func (per *ProcessedEuResult) Reclaim() {
+	processedEuResultPool.Put(per)
+}
+
 func Process(ars *ctypes.TxAccessRecords) *ProcessedEuResult {
-	length := len(ars.Accesses)
-	per := &ProcessedEuResult{
-		Hash:        ars.Hash,
-		Txs:         make([]uint32, length),
-		Paths:       make([]string, length),
-		Reads:       make([]uint32, length),
-		Writes:      make([]uint32, length),
-		AddOrDelete: make([]bool, length),
-		Composite:   make([]bool, length),
-		Transitions: make([]*BalanceTransition, 0, length),
-	}
+	per := processedEuResultPool.Get().(*ProcessedEuResult)
+	per.Reset(ars.Hash)
 	univalues := urltype.Univalues{}
-	univalues = univalues.DecodeV2(ars.Accesses)
-	for i, uv := range univalues {
+	univalues = univalues.DecodeV2(ars.Accesses, univaluePool.Get, univaluePool.Put)
+	for _, uv := range univalues {
 		univalue := uv.(*urltype.Univalue)
-		per.Txs[i] = univalue.GetTx()
-		per.Paths[i] = univalue.GetPath()
-		per.Reads[i] = univalue.Reads()
-		per.Writes[i] = univalue.Writes()
-		//per.AddOrDelete[i] = univalue.IfAddOrDelete()
-		per.Composite[i] = univalue.Composite()
+		per.Txs = append(per.Txs, univalue.GetTx())
+		per.Paths = append(per.Paths, *univalue.GetPath())
+		per.Reads = append(per.Reads, univalue.Reads())
+		per.Writes = append(per.Writes, univalue.Writes())
+		per.Composite = append(per.Composite, univalue.Composite())
 		switch v := univalue.Value().(type) {
 		case *commutative.Balance:
-			if v.GetDelta().Sign() >= 0 {
+			if v.GetDelta().(*big.Int).Sign() >= 0 {
 				continue
 			}
 			per.Transitions = append(per.Transitions, &BalanceTransition{
-				Path:   univalue.GetPath(),
+				Path:   *univalue.GetPath(),
 				Tx:     univalue.GetTx(),
 				Origin: v.Value().(*big.Int),
-				Delta:  v.GetDelta(),
+				Delta:  v.GetDelta().(*big.Int),
 			})
 		}
+		univalue.Reclaim()
 	}
 	return per
 }

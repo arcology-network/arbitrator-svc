@@ -2,9 +2,12 @@ package arbitrator_test
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
+
+	"github.com/arcology-network/common-lib/common"
 )
 
 func TestStringAppend(t *testing.T) {
@@ -26,4 +29,30 @@ func TestStringAppend2(t *testing.T) {
 	str := buf.String()
 	t.Log(len(str))
 	t.Log(time.Duration(time.Since(begin)))
+}
+
+func TestJson(t *testing.T) {
+	txids := []uint32{10, 12}
+	paths := []string{"123", "456"}
+	pathdata, err := json.Marshal(paths)
+	if err != nil {
+		fmt.Printf("Marshal err : %v\n", err)
+		return
+	}
+	fmt.Printf("pathdata:%v\n", string(pathdata))
+
+	common.AppendToFile("testapp", string(pathdata))
+
+	txdata, err := json.Marshal(txids)
+	if err != nil {
+		fmt.Printf("Marshal err : %v\n", err)
+		return
+	}
+	fmt.Printf("txdata:%v\n", string(txdata))
+
+	common.AppendToFile("testapp", string(txdata))
+
+	filename := "testapp"
+	common.AddToLogFile(filename, "path", paths)
+	common.AddToLogFile(filename, "txids", txids)
 }

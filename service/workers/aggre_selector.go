@@ -1,7 +1,11 @@
 package workers
 
 import (
+	"fmt"
+	"time"
+
 	ethCommon "github.com/arcology-network/3rd-party/eth/common"
+	arbitrator "github.com/arcology-network/arbitrator-svc/impl-arbitrator"
 	"github.com/arcology-network/arbitrator-svc/types"
 	ctypes "github.com/arcology-network/common-lib/types"
 	"github.com/arcology-network/component-lib/actor"
@@ -12,14 +16,16 @@ import (
 
 type EuResultsAggreSelector struct {
 	actor.WorkerThread
-	ag *aggregator.Aggregator
+	ag         *aggregator.Aggregator
+	arbitrator *arbitrator.ArbitratorImpl
 }
 
 //return a Subscriber struct
-func NewEuResultsAggreSelector(concurrency int, groupid string) *EuResultsAggreSelector {
+func NewEuResultsAggreSelector(concurrency int, groupid string, arbitrator *arbitrator.ArbitratorImpl) *EuResultsAggreSelector {
 	agg := EuResultsAggreSelector{}
 	agg.Set(concurrency, groupid)
 	agg.ag = aggregator.NewAggregator()
+	agg.arbitrator = arbitrator
 	return &agg
 }
 
@@ -30,7 +36,9 @@ func (a *EuResultsAggreSelector) OnMessageArrived(msgs []*actor.Message) error {
 	switch msgs[0].Name {
 	case actor.MsgAppHash:
 		remainingQuantity := a.ag.OnClearInfoReceived()
-		a.AddLog(log.LogLevel_Info, "clear pool", zap.Int("remainingQuantity", remainingQuantity))
+		t := time.Now()
+		a.arbitrator.Clear()
+		a.AddLog(log.LogLevel_Info, "clear pool", zap.Int("remainingQuantity", remainingQuantity), zap.Duration("arbitrator engine clear time", time.Since(t)))
 	case actor.MsgReapinglist:
 		reapinglist := msgs[0].Data.(*ctypes.ReapingList)
 		result, _ := a.ag.OnListReceived(reapinglist)
@@ -41,6 +49,10 @@ func (a *EuResultsAggreSelector) OnMessageArrived(msgs []*actor.Message) error {
 		a.ag.OnClearListReceived(inclusive)
 	case actor.MsgPreProcessedEuResults:
 		data := msgs[0].Data.([]*types.ProcessedEuResult)
+		fmt.Printf("===================height=%v\n", msgs[0].Height)
+		tim, nums := a.arbitrator.Insert(data)
+		a.AddLog(log.LogLevel_Debug, "insert accessRecord***********", zap.Int("counts", nums), zap.Durations("time", tim))
+
 		if data != nil && len(data) > 0 {
 			for _, v := range data {
 				euResult := v

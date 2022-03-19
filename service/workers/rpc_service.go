@@ -3,6 +3,7 @@ package workers
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	ethCommon "github.com/arcology-network/3rd-party/eth/common"
@@ -24,12 +25,12 @@ type RpcService struct {
 }
 
 //return a Subscriber struct
-func NewRpcService(lanes int, groupid string) *RpcService {
-	rs := RpcService{
-		arbitrator: arbitrator.NewArbitratorImpl(),
-	}
+func NewRpcService(lanes int, groupid string, arbitrator *arbitrator.ArbitratorImpl) *RpcService {
+	rs := RpcService{}
 	rs.Set(lanes, groupid)
 	rs.msgid = 0
+
+	rs.arbitrator = arbitrator
 	return &rs
 }
 
@@ -38,15 +39,17 @@ func (rs *RpcService) OnStart() {
 }
 
 func (rs *RpcService) OnMessageArrived(msgs []*actor.Message) error {
-	var euResults *[]*types.ProcessedEuResult
+
 	for _, v := range msgs {
 		switch v.Name {
 		case actor.MsgStartSub:
 
 		case actor.MsgEuResultSelected:
-			euResults = v.Data.(*[]*types.ProcessedEuResult)
-			rs.AddLog(log.LogLevel_Debug, "received euresult***********", zap.Int64("msgid", rs.msgid))
+			euResults := v.Data.(*[]*types.ProcessedEuResult)
+			rs.AddLog(log.LogLevel_Debug, "received selectedEuresult***********", zap.Int64("msgid", rs.msgid))
 			rs.wbs.Update(rs.msgid, euResults)
+
+			fmt.Printf("height=%v\n", v.Height)
 		}
 	}
 
@@ -89,13 +92,42 @@ func (rs *RpcService) Arbitrate(ctx context.Context, request *actor.Message, res
 	}
 
 	if resultSelected != nil && len(*resultSelected) > 0 {
-		logid := rs.AddLog(log.LogLevel_Info, "Before NewExecutionSchedule")
+		/*
+			currentpath, err := common.GetCurrentDirectory()
+			if err == nil {
+
+				//fmt.Println("path:=" + currentpath)
+
+				fmt.Printf("=============================height=%v\n", request.Height)
+
+				path := currentpath + fmt.Sprintf("/%v", request.Height)
+				if !common.DirExists(path) {
+					os.Mkdir(path, os.ModePerm)
+				}
+
+				NumPerBatch := 500
+				for i := 0; i < len(*resultSelected)/NumPerBatch; i++ {
+					endIdx := (i + 1) * 500
+					if endIdx > len(*resultSelected) {
+						endIdx = len(*resultSelected)
+					}
+					tim, nums := rs.arbitrator.Insert(path+"/"+fmt.Sprintf("%v", i), (*resultSelected)[i*NumPerBatch:endIdx])
+					rs.AddLog(log.LogLevel_Debug, "insert accessRecord***********", zap.Int("counts", nums), zap.Duration("time", tim))
+				}
+
+			}
+		*/
+		logid := rs.AddLog(log.LogLevel_Info, "Before detectConflict")
 		interLog := rs.GetLogger(logid)
 		conflictedList, left, right := detectConflict(rs.arbitrator, params.TxsListGroup, resultSelected, interLog)
 		rs.AddLog(log.LogLevel_Debug, "arbitrate return results***********", zap.Int("txResults", len(conflictedList)))
+
 		response.ConflictedList = conflictedList
 		response.CPairLeft = left
 		response.CPairRight = right
+		for _, per := range *resultSelected {
+			per.Reclaim()
+		}
 		return nil
 	}
 
@@ -103,16 +135,22 @@ func (rs *RpcService) Arbitrate(ctx context.Context, request *actor.Message, res
 }
 
 func detectConflict(arbitrator *arbitrator.ArbitratorImpl, txsListGroup [][]*ctypes.TxElement, euResults *[]*types.ProcessedEuResult, inlog *actor.WorkerThreadLogger) ([]*ethCommon.Hash, []uint32, []uint32) {
+	timeDetails := make([]time.Duration, 10)
 	// Make the results indexable.
+	t := time.Now()
 	euDict := make(map[ethCommon.Hash]*types.ProcessedEuResult, len(*euResults))
 	for _, r := range *euResults {
 		euDict[ethCommon.BytesToHash([]byte(r.Hash))] = r
 	}
+	timeDetails[0] = time.Since(t)
 	// Prepare arguments for DetectConflict.
+	t = time.Now()
 	groups := make([][]*types.ProcessedEuResult, 0, len(txsListGroup))
+	total := 0
 	var maxBatch uint64 = 0
 	for _, g := range txsListGroup {
 		group := make([]*types.ProcessedEuResult, 0, len(g))
+		total = total + len(g)
 		for _, e := range g {
 			group = append(group, euDict[*e.TxHash])
 			if e.Batchid > maxBatch {
@@ -121,48 +159,67 @@ func detectConflict(arbitrator *arbitrator.ArbitratorImpl, txsListGroup [][]*cty
 		}
 		groups = append(groups, group)
 	}
-	inlog.Log(log.LogLevel_Debug, "----------------before arbitrator.Reset")
-	// Arbitration.
-	arbitrator.Reset()
-	inlog.Log(log.LogLevel_Debug, "----------------after arbitrator.Reset", zap.Int("euDict", len(*euResults)))
-	ids, _, flags, left, right, tims, clearTime, txnums := arbitrator.DetectConflict(groups)
-	inlog.Log(log.LogLevel_Debug, "----------------after arbitrator.DetectConflict", zap.Durations("tims", tims), zap.Duration("cleartime", time.Now().Sub(clearTime)), zap.Int("txnums", txnums))
-	// Unique conflict IDs.
-	uniqueConflicts := make(map[uint32]struct{})
-	for i, conflict := range flags {
-		if conflict {
-			uniqueConflicts[ids[i]] = struct{}{}
+
+	gpDict := make(map[uint32]int, total)
+	for i, g := range txsListGroup {
+		for _, e := range g {
+			gpDict[e.Txid] = i
 		}
 	}
+	timeDetails[1] = time.Since(t)
+	// Arbitration.
+	t = time.Now()
+	inlog.Log(log.LogLevel_Debug, "----------------before arbitrator.DetectConflict", zap.Int("euDict", len(*euResults)))
+	ids, _, flags, left, right, tims, txnums, details, totals := arbitrator.DetectConflict(groups)
+	inlog.Log(log.LogLevel_Debug, "----------------after arbitrator.DetectConflict", zap.Durations("tims", tims), zap.Durations("details", details), zap.Int("totals", totals), zap.Int("txnums", txnums), zap.Int("conflictNums", len(ids)))
+	timeDetails[2] = time.Since(t)
+	// Unique conflict IDs.
+	t = time.Now()
+	uniqueConflicts := make(map[int]struct{})
+	for i, conflict := range flags {
+		if conflict {
+			uniqueConflicts[gpDict[ids[i]]] = struct{}{}
+		}
+	}
+	timeDetails[3] = time.Since(t)
 	// Add conflicted groups into conflict list.
+	t = time.Now()
 	var conflictedList []*ethCommon.Hash
 	for id := range uniqueConflicts {
 		for _, e := range txsListGroup[id] {
 			conflictedList = append(conflictedList, e.TxHash)
 		}
 	}
+	timeDetails[4] = time.Since(t)
 	inlog.Log(log.LogLevel_Debug, "Arbitration result", zap.Int("conflictNums", len(conflictedList)))
 	// Make batch info indexable.
+	t = time.Now()
 	batches := make([][]*types.ProcessedEuResult, maxBatch+1)
 	for i := range batches {
 		batches[i] = make([]*types.ProcessedEuResult, 0, len(*euResults)/(i+1))
 	}
 	for i, g := range txsListGroup {
-		if _, ok := uniqueConflicts[uint32(i)]; ok {
+		if _, ok := uniqueConflicts[i]; ok {
 			continue
 		}
 		for _, e := range g {
 			batches[e.Batchid] = append(batches[e.Batchid], euDict[*e.TxHash])
 		}
 	}
+	timeDetails[5] = time.Since(t)
 	// Prepare arguments for BatchCheck.
+	t = time.Now()
 	txs := make([]*types.ProcessedEuResult, 0, len(*euResults))
 	for i := uint64(0); i <= maxBatch; i++ {
 		txs = append(txs, batches[i]...)
 	}
+	timeDetails[6] = time.Since(t)
 	// Accumulation.
+	t = time.Now()
 	results := accumulator.CheckBalance(batches)
+	timeDetails[7] = time.Since(t)
 	// Make results indexable.
+	t = time.Now()
 	conflictDict := make(map[ethCommon.Hash]struct{})
 	for i, conflict := range results {
 		if !conflict {
@@ -170,9 +227,11 @@ func detectConflict(arbitrator *arbitrator.ArbitratorImpl, txsListGroup [][]*cty
 		}
 		conflictDict[ethCommon.BytesToHash([]byte(txs[i].Hash))] = struct{}{}
 	}
+	timeDetails[8] = time.Since(t)
 	// Add conflicted groups into conflict list.
+	t = time.Now()
 	for i, g := range txsListGroup {
-		if _, ok := uniqueConflicts[uint32(i)]; ok {
+		if _, ok := uniqueConflicts[i]; ok {
 			continue
 		}
 		isConflict := false
@@ -190,6 +249,7 @@ func detectConflict(arbitrator *arbitrator.ArbitratorImpl, txsListGroup [][]*cty
 		}
 		//inlog.Log(log.LogLevel_Debug, "Accumulation result", zap.Int("conflictNums", len(conflictedList)))
 	}
-
+	timeDetails[9] = time.Since(t)
+	inlog.Log(log.LogLevel_Debug, "detectConflict time details", zap.Durations("detail", timeDetails))
 	return conflictedList, left, right
 }

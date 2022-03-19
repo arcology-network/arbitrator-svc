@@ -22,18 +22,17 @@ func (p *EuResultPreProcessor) OnStart() {
 }
 
 func (p *EuResultPreProcessor) OnMessageArrived(msgs []*actor.Message) error {
-	// t0 := time.Now()
-	results := *(msgs[0].Data.(*ctypes.TxAccessRecordses))
+	results := *(msgs[0].Data.(*ctypes.TxAccessRecordSet))
 	processed := make([]*types.ProcessedEuResult, len(results))
 	worker := func(start, end, idx int, args ...interface{}) {
-		euresults := args[0].([]interface{})[0].(ctypes.TxAccessRecordses)
+		euresults := args[0].([]interface{})[0].(ctypes.TxAccessRecordSet)
 		processResults := args[0].([]interface{})[1].(*[]*types.ProcessedEuResult)
 		for i := start; i < end; i++ {
 			(*processResults)[i] = types.Process(euresults[i])
 		}
 	}
 	common.ParallelWorker(len(results), p.Concurrency, worker, results, &processed)
+
 	p.MsgBroker.Send(actor.MsgPreProcessedEuResults, processed)
-	// fmt.Println("EuResultPreProcessor: ", time.Since(t0))
 	return nil
 }

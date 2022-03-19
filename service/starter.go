@@ -2,6 +2,7 @@ package service
 
 import (
 	tmCommon "github.com/arcology-network/3rd-party/tm/common"
+	mainConfig "github.com/arcology-network/component-lib/config"
 	"github.com/arcology-network/component-lib/kafka"
 	"github.com/arcology-network/component-lib/log"
 	"github.com/arcology-network/component-lib/rpc"
@@ -20,6 +21,7 @@ func init() {
 
 	flags.String("mqaddr", "localhost:9092", "host:port of kafka ")
 	flags.String("mqaddr2", "localhost:9092", "host:port of kafka ")
+	flags.String("mqaddr3", "localhost:9092", "host:port of kafka ")
 
 	//common
 	flags.Int("concurrency", 4, "num of threads")
@@ -34,9 +36,11 @@ func init() {
 
 	flags.String("zkUrl", "127.0.0.1:2181", "url of zookeeper")
 	flags.String("localIp", "127.0.0.1", "local ip of server")
+	flags.String("maincfg", "./monaco.toml", "main conf path")
 }
 
 func startCmd(cmd *cobra.Command, args []string) error {
+	mainConfig.InitCfg(viper.GetString("maincfg"))
 	log.InitLog("arbitrator.log", viper.GetString("logcfg"), "arbitrator", viper.GetString("nname"), viper.GetInt("nidx"))
 
 	en := NewConfig(
@@ -45,7 +49,7 @@ func startCmd(cmd *cobra.Command, args []string) error {
 		viper.GetString("inclusive-txs"),
 		viper.GetString("accessrecords"),
 		viper.GetString("mqaddr"),
-		viper.GetString("mqaddr2"),
+		viper.GetString("mqaddr3"),
 		viper.GetString("localIp"),
 		viper.GetString("zkUrl"),
 		kafka.NewKafkaDownloader,
